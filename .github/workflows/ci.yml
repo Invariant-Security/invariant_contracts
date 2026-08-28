@@ -1,0 +1,22 @@
+# Pure Python, sem Docker/Postgres/Playwright -- roda em segundos. É a
+# pipeline mais enxuta dos 5 repos invariant_*, exatamente porque este é o
+# único que não fala com nada externo (nem banco, nem alvo, nem PDF).
+name: ci
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -q
