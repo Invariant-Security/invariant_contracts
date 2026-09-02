@@ -6,6 +6,8 @@ type mismatch against the dataclasses these models mirror.
 
 from invariant_contracts import (
     Control,
+    DiscoveryResult,
+    Endpoint,
     ExtractedRecommendation,
     Finding,
     ProfileLevel,
@@ -17,6 +19,27 @@ from invariant_contracts import (
 def test_target_round_trip():
     data = {"name": "invariant-debian-baseline"}
     assert Target.model_validate(data).model_dump() == data
+
+
+def test_endpoint_round_trip_with_defaults():
+    data = {"address": "10.0.0.0/24"}
+    endpoint = Endpoint.model_validate(data)
+    assert endpoint.label is None
+    assert endpoint.tags == []
+
+    full = {**data, "label": "escritório", "tags": ["filial-sp"]}
+    assert Endpoint.model_validate(full).model_dump() == full
+
+
+def test_discovery_result_round_trip():
+    data = {
+        "ip": "10.0.0.5",
+        "classification": "linux",
+        "confidence": 0.82,
+        "evidence": {"open_ports": [22], "banners": {"22": "SSH-2.0-OpenSSH_9.2 Debian"}},
+        "scanned_at": "2026-09-02T00:00:00+00:00",
+    }
+    assert DiscoveryResult.model_validate(data).model_dump() == data
 
 
 def test_profile_level_round_trip():
