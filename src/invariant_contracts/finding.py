@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -21,3 +23,9 @@ class Finding(BaseModel):
     document_retrieved_at: str = ""
     level: int | None = None
     scored: bool | None = None
+    # Decidido pela rota que gerou este Finding (docker-exec vs SSH), nunca
+    # inferido de nome/heurística -- feeds invariant_api's applicability
+    # logic (finding_taxonomy.py) directly: HOST_ONLY_CONTROLS only applies
+    # to docker_container, never to a real linux_host. Default preserves
+    # every existing caller that predates this field.
+    target_type: Literal["linux_host", "docker_container"] = "docker_container"

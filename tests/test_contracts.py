@@ -80,9 +80,12 @@ def test_finding_round_trip_with_defaults():
     assert finding.remediation == ""
     assert finding.level is None
     assert finding.scored is None
+    assert finding.target_type == "docker_container"
 
-    full = {**data, "remediation": "fix it", "level": 1, "scored": True}
-    assert Finding.model_validate(full).model_dump()["level"] == 1
+    full = {**data, "remediation": "fix it", "level": 1, "scored": True, "target_type": "linux_host"}
+    dumped = Finding.model_validate(full).model_dump()
+    assert dumped["level"] == 1
+    assert dumped["target_type"] == "linux_host"
 
 
 def test_extracted_recommendation_round_trip():
