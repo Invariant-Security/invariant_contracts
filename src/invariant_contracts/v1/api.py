@@ -76,14 +76,22 @@ class DiscoveryHost(_Model):
     scanned_at: datetime
 
 
+_WRITE_ONLY = {"writeOnly": True}
+
+
 class SSHCredentials(_Model):
-    """Usadas só durante a avaliação; nunca gravadas nem devolvidas."""
+    """SOMENTE ENTRADA. Usadas apenas durante a avaliação: nunca aparecem em
+    resposta, log, persistência ou webhook. Nenhum modelo de saída do v1
+    referencia este tipo (garantido por teste) e os segredos são excluídos
+    de qualquer serialização (`model_dump`/`model_dump_json`)."""
+
+    model_config = ConfigDict(extra="forbid", json_schema_extra=_WRITE_ONLY)
 
     port: int = Field(default=22, ge=1, le=65535)
     username: str = Field(min_length=1, max_length=256)
     auth_method: Literal["key", "password"]
-    private_key: str | None = Field(default=None, repr=False)
-    password: str | None = Field(default=None, repr=False)
+    private_key: str | None = Field(default=None, repr=False, exclude=True, json_schema_extra=_WRITE_ONLY)
+    password: str | None = Field(default=None, repr=False, exclude=True, json_schema_extra=_WRITE_ONLY)
 
     @model_validator(mode="after")
     def _exactly_one_secret(self) -> "SSHCredentials":
@@ -103,7 +111,6 @@ class AssessmentRequest(_Model):
         default=None,
         description="IP dentro do alvo (CIDR) e presente na última descoberta; omitido = primeiro descoberto",
     )
-    report: ReportKind | None = Field(default=None, description="Gera o PDF junto e devolve em `report`")
 
 
 FindingResult = Literal["pass", "fail", "not_assessed", "not_applicable"]
@@ -130,11 +137,7 @@ class Summary(_Model):
     compliance_pct: int | None = Field(ge=0, le=100, description="None = nada aplicável foi avaliado")
 
 
-class ReportFile(_Model):
-    kind: ReportKind
-    filename: str
-    content_type: Literal["application/pdf"] = "application/pdf"
-    content_base64: str
+FindingsOmittedReason = Literal["not_stored", "retention_expired"]
 
 
 class AssessmentEnvelope(_Model):
@@ -145,12 +148,20 @@ class AssessmentEnvelope(_Model):
     assessed_at: datetime
     source: Literal["console", "api"]
     summary: Summary
-    findings: list[Finding] | None
-    findings_omitted: bool = Field(
-        description="true quando os achados não estão disponíveis (ex.: repetição por Idempotency-Key "
-        "com 'guardar achados' desligado)"
+    findings: list[Finding] | None = Field(
+        description="Presente na resposta da própria avaliação; depois, só se 'guardar achados' estiver "
+        "ligado e dentro da retenção. null sempre acompanha findings_omitted_reason."
     )
-    report: ReportFile | None = None
+    findings_omitted_reason: FindingsOmittedReason | None = Field(
+        description="not_stored: 'guardar achados' desligado (inclusive em repetição por Idempotency-Key); "
+        "retention_expired: guardados, mas já apagados pela retenção"
+    )
+
+    @model_validator(mode="after")
+    def _findings_xor_reason(self) -> "AssessmentEnvelope":
+        if (self.findings is None) == (self.findings_omitted_reason is None):
+            raise ValueError("findings e findings_omitted_reason: exatamente um deve estar presente")
+        return self
 
 
 class AssessmentListItem(_Model):
@@ -164,9 +175,10 @@ class AssessmentListItem(_Model):
 
 
 class ReportRequest(_Model):
-    """Gera o PDF de uma avaliação já feita — exige 'guardar achados' ligado
-    (senão ErrorCode.findings_not_stored). Para não depender disso, peça
-    `report` no próprio AssessmentRequest."""
+    """Gera o PDF (resposta binária application/pdf) de uma avaliação já
+    feita. Só funciona com 'guardar achados' ligado e os achados ainda dentro
+    da retenção; senão ErrorCode.findings_not_stored. Com a opção desligada,
+    os achados não são persistidos nem temporariamente."""
 
     assessment_id: UUID
     kind: ReportKind

@@ -81,40 +81,6 @@
         "title": "Finding",
         "type": "object"
       },
-      "ReportFile": {
-        "additionalProperties": false,
-        "properties": {
-          "content_base64": {
-            "title": "Content Base64",
-            "type": "string"
-          },
-          "content_type": {
-            "const": "application/pdf",
-            "default": "application/pdf",
-            "title": "Content Type",
-            "type": "string"
-          },
-          "filename": {
-            "title": "Filename",
-            "type": "string"
-          },
-          "kind": {
-            "enum": [
-              "executive",
-              "technical"
-            ],
-            "title": "Kind",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "filename",
-          "content_base64"
-        ],
-        "title": "ReportFile",
-        "type": "object"
-      },
       "Summary": {
         "additionalProperties": false,
         "properties": {
@@ -192,23 +158,24 @@
             "type": "null"
           }
         ],
+        "description": "Presente na resposta da própria avaliação; depois, só se 'guardar achados' estiver ligado e dentro da retenção. null sempre acompanha findings_omitted_reason.",
         "title": "Findings"
       },
-      "findings_omitted": {
-        "description": "true quando os achados não estão disponíveis (ex.: repetição por Idempotency-Key com 'guardar achados' desligado)",
-        "title": "Findings Omitted",
-        "type": "boolean"
-      },
-      "report": {
+      "findings_omitted_reason": {
         "anyOf": [
           {
-            "$ref": "#/$defs/ReportFile"
+            "enum": [
+              "not_stored",
+              "retention_expired"
+            ],
+            "type": "string"
           },
           {
             "type": "null"
           }
         ],
-        "default": null
+        "description": "not_stored: 'guardar achados' desligado (inclusive em repetição por Idempotency-Key); retention_expired: guardados, mas já apagados pela retenção",
+        "title": "Findings Omitted Reason"
       },
       "source": {
         "enum": [
@@ -240,7 +207,7 @@
       "source",
       "summary",
       "findings",
-      "findings_omitted"
+      "findings_omitted_reason"
     ],
     "title": "AssessmentEnvelope",
     "type": "object"
@@ -348,7 +315,7 @@
     "$defs": {
       "SSHCredentials": {
         "additionalProperties": false,
-        "description": "Usadas só durante a avaliação; nunca gravadas nem devolvidas.",
+        "description": "SOMENTE ENTRADA. Usadas apenas durante a avaliação: nunca aparecem em\nresposta, log, persistência ou webhook. Nenhum modelo de saída do v1\nreferencia este tipo (garantido por teste) e os segredos são excluídos\nde qualquer serialização (`model_dump`/`model_dump_json`).",
         "properties": {
           "auth_method": {
             "enum": [
@@ -368,7 +335,8 @@
               }
             ],
             "default": null,
-            "title": "Password"
+            "title": "Password",
+            "writeOnly": true
           },
           "port": {
             "default": 22,
@@ -387,7 +355,8 @@
               }
             ],
             "default": null,
-            "title": "Private Key"
+            "title": "Private Key",
+            "writeOnly": true
           },
           "username": {
             "maxLength": 256,
@@ -401,7 +370,8 @@
           "auth_method"
         ],
         "title": "SSHCredentials",
-        "type": "object"
+        "type": "object",
+        "writeOnly": true
       }
     },
     "additionalProperties": false,
@@ -419,23 +389,6 @@
         "default": null,
         "description": "IP dentro do alvo (CIDR) e presente na última descoberta; omitido = primeiro descoberto",
         "title": "Ip"
-      },
-      "report": {
-        "anyOf": [
-          {
-            "enum": [
-              "executive",
-              "technical"
-            ],
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "description": "Gera o PDF junto e devolve em `report`",
-        "title": "Report"
       },
       "ssh": {
         "$ref": "#/$defs/SSHCredentials"
@@ -658,7 +611,7 @@
   },
   "ReportRequest": {
     "additionalProperties": false,
-    "description": "Gera o PDF de uma avaliação já feita — exige 'guardar achados' ligado\n(senão ErrorCode.findings_not_stored). Para não depender disso, peça\n`report` no próprio AssessmentRequest.",
+    "description": "Gera o PDF (resposta binária application/pdf) de uma avaliação já\nfeita. Só funciona com 'guardar achados' ligado e os achados ainda dentro\nda retenção; senão ErrorCode.findings_not_stored. Com a opção desligada,\nos achados não são persistidos nem temporariamente.",
     "properties": {
       "assessment_id": {
         "format": "uuid",
@@ -896,20 +849,8 @@
     "$defs": {
       "AssessmentCompletedData": {
         "additionalProperties": false,
+        "description": "Só o resumo — nunca achados, evidência ou credenciais.",
         "properties": {
-          "assessment_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "null para container (não há id persistido)",
-            "title": "Assessment Id"
-          },
           "source": {
             "enum": [
               "console",
@@ -942,7 +883,6 @@
         },
         "required": [
           "source",
-          "assessment_id",
           "target",
           "summary"
         ],
@@ -1050,17 +990,24 @@
     },
     "additionalProperties": false,
     "properties": {
-      "created_at": {
-        "format": "date-time",
-        "title": "Created At",
+      "assessment_id": {
+        "description": "Sempre presente; para container é gerado na conclusão",
+        "format": "uuid",
+        "title": "Assessment Id",
         "type": "string"
       },
       "data": {
         "$ref": "#/$defs/AssessmentCompletedData"
       },
-      "id": {
+      "event_id": {
+        "description": "Imutável: o mesmo em todas as retentativas (deduplique por ele)",
         "format": "uuid",
-        "title": "Id",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event_type": {
+        "const": "assessment.completed",
+        "title": "Event Type",
         "type": "string"
       },
       "installation_id": {
@@ -1068,17 +1015,25 @@
         "title": "Installation Id",
         "type": "string"
       },
-      "type": {
-        "const": "assessment.completed",
-        "title": "Type",
+      "occurred_at": {
+        "description": "Quando a avaliação terminou",
+        "format": "date-time",
+        "title": "Occurred At",
         "type": "string"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
       }
     },
     "required": [
-      "id",
-      "type",
-      "created_at",
+      "event_id",
+      "event_type",
+      "occurred_at",
       "installation_id",
+      "assessment_id",
       "data"
     ],
     "title": "WebhookEvent",

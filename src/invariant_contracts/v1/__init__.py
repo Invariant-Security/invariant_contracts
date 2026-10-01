@@ -16,7 +16,6 @@ from invariant_contracts.v1.api import (
     ErrorCode,
     ErrorResponse,
     Finding,
-    ReportFile,
     ReportKind,
     ReportRequest,
     SSHCredentials,
@@ -63,6 +62,12 @@ Política de compatibilidade do /v1 (e dos contratos de licença e webhook):
 - Remover, renomear ou mudar o tipo de um campo = nova versão (/v2).
 - Depreciação anunciada com no mínimo 6 meses de antecedência.
 - O /v1 não muda porque o console interno mudou: o console usa rotas internas.
+- Credenciais SSH são somente entrada: nunca aparecem em resposta, log,
+  persistência ou webhook.
+- store_findings=false significa que achados não são persistidos nem
+  temporariamente: depois da resposta da avaliação, findings=null com
+  findings_omitted_reason="not_stored", e PDF por assessment_id devolve
+  findings_not_stored.
 """
 
 __all__ = [
@@ -85,7 +90,6 @@ __all__ = [
     "LicensingError",
     "LicensingErrorCode",
     "POLICY",
-    "ReportFile",
     "ReportKind",
     "ReportRequest",
     "SSHCredentials",

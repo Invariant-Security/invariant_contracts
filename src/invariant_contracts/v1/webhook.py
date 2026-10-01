@@ -1,11 +1,11 @@
 """Evento de webhook entregue ao cliente vendedor.
 
 Headers de cada entrega:
-- X-Invariant-Event-Id: igual ao `id` do corpo; o MESMO em todas as
+- X-Invariant-Event-Id: igual ao `event_id` do corpo; o MESMO em todas as
   retentativas (use para deduplicar — a entrega é "pelo menos uma vez").
 - X-Invariant-Delivery-Id: único por tentativa de entrega.
 - X-Invariant-Signature: "t=<unix>,v1=<hex>", HMAC-SHA256(segredo,
-  f"{t}.{corpo_bruto}") — ver invariant_contracts.webhook_signature.
+  f"{t}.{corpo_bruto}") — ver invariant_contracts.signing.
 """
 
 from datetime import datetime
@@ -34,15 +34,18 @@ class ContainerRef(_Model):
 
 
 class AssessmentCompletedData(_Model):
+    """Só o resumo — nunca achados, evidência ou credenciais."""
+
     source: Literal["console", "api"]
-    assessment_id: UUID | None = Field(description="null para container (não há id persistido)")
     target: HostRef | ContainerRef = Field(discriminator="kind")
     summary: Summary
 
 
 class WebhookEvent(_Model):
-    id: UUID
-    type: Literal["assessment.completed"]
-    created_at: datetime
+    event_id: UUID = Field(description="Imutável: o mesmo em todas as retentativas (deduplique por ele)")
+    event_type: Literal["assessment.completed"]
+    schema_version: Literal[1] = 1
+    occurred_at: datetime = Field(description="Quando a avaliação terminou")
     installation_id: UUID
+    assessment_id: UUID = Field(description="Sempre presente; para container é gerado na conclusão")
     data: AssessmentCompletedData
