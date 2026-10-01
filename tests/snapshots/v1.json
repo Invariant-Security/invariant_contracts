@@ -1,0 +1,1087 @@
+{
+  "AssessmentEnvelope": {
+    "$defs": {
+      "Finding": {
+        "additionalProperties": false,
+        "properties": {
+          "benchmark": {
+            "title": "Benchmark",
+            "type": "string"
+          },
+          "benchmark_version": {
+            "title": "Benchmark Version",
+            "type": "string"
+          },
+          "collected_at": {
+            "format": "date-time",
+            "title": "Collected At",
+            "type": "string"
+          },
+          "control_id": {
+            "title": "Control Id",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "remediation": {
+            "title": "Remediation",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "not_assessed",
+              "not_applicable"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "scored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_id",
+          "title",
+          "benchmark",
+          "benchmark_version",
+          "result",
+          "level",
+          "scored",
+          "evidence",
+          "remediation",
+          "collected_at"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "ReportFile": {
+        "additionalProperties": false,
+        "properties": {
+          "content_base64": {
+            "title": "Content Base64",
+            "type": "string"
+          },
+          "content_type": {
+            "const": "application/pdf",
+            "default": "application/pdf",
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "executive",
+              "technical"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "filename",
+          "content_base64"
+        ],
+        "title": "ReportFile",
+        "type": "object"
+      },
+      "Summary": {
+        "additionalProperties": false,
+        "properties": {
+          "compliance_pct": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None = nada aplicável foi avaliado",
+            "title": "Compliance Pct"
+          },
+          "failed": {
+            "minimum": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "not_applicable": {
+            "minimum": 0,
+            "title": "Not Applicable",
+            "type": "integer"
+          },
+          "not_assessed": {
+            "minimum": 0,
+            "title": "Not Assessed",
+            "type": "integer"
+          },
+          "passed": {
+            "minimum": 0,
+            "title": "Passed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "not_assessed",
+          "not_applicable",
+          "compliance_pct"
+        ],
+        "title": "Summary",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "assessed_at": {
+        "format": "date-time",
+        "title": "Assessed At",
+        "type": "string"
+      },
+      "assessed_ip": {
+        "title": "Assessed Ip",
+        "type": "string"
+      },
+      "assessment_id": {
+        "format": "uuid",
+        "title": "Assessment Id",
+        "type": "string"
+      },
+      "findings": {
+        "anyOf": [
+          {
+            "items": {
+              "$ref": "#/$defs/Finding"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Findings"
+      },
+      "findings_omitted": {
+        "description": "true quando os achados não estão disponíveis (ex.: repetição por Idempotency-Key com 'guardar achados' desligado)",
+        "title": "Findings Omitted",
+        "type": "boolean"
+      },
+      "report": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ReportFile"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "source": {
+        "enum": [
+          "console",
+          "api"
+        ],
+        "title": "Source",
+        "type": "string"
+      },
+      "summary": {
+        "$ref": "#/$defs/Summary"
+      },
+      "target_id": {
+        "title": "Target Id",
+        "type": "integer"
+      },
+      "target_kind": {
+        "const": "linux_host",
+        "default": "linux_host",
+        "title": "Target Kind",
+        "type": "string"
+      }
+    },
+    "required": [
+      "assessment_id",
+      "target_id",
+      "assessed_ip",
+      "assessed_at",
+      "source",
+      "summary",
+      "findings",
+      "findings_omitted"
+    ],
+    "title": "AssessmentEnvelope",
+    "type": "object"
+  },
+  "AssessmentListItem": {
+    "$defs": {
+      "Summary": {
+        "additionalProperties": false,
+        "properties": {
+          "compliance_pct": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None = nada aplicável foi avaliado",
+            "title": "Compliance Pct"
+          },
+          "failed": {
+            "minimum": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "not_applicable": {
+            "minimum": 0,
+            "title": "Not Applicable",
+            "type": "integer"
+          },
+          "not_assessed": {
+            "minimum": 0,
+            "title": "Not Assessed",
+            "type": "integer"
+          },
+          "passed": {
+            "minimum": 0,
+            "title": "Passed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "not_assessed",
+          "not_applicable",
+          "compliance_pct"
+        ],
+        "title": "Summary",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "assessed_at": {
+        "format": "date-time",
+        "title": "Assessed At",
+        "type": "string"
+      },
+      "assessed_ip": {
+        "title": "Assessed Ip",
+        "type": "string"
+      },
+      "assessment_id": {
+        "format": "uuid",
+        "title": "Assessment Id",
+        "type": "string"
+      },
+      "findings_stored": {
+        "title": "Findings Stored",
+        "type": "boolean"
+      },
+      "source": {
+        "enum": [
+          "console",
+          "api"
+        ],
+        "title": "Source",
+        "type": "string"
+      },
+      "summary": {
+        "$ref": "#/$defs/Summary"
+      },
+      "target_id": {
+        "title": "Target Id",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "assessment_id",
+      "target_id",
+      "assessed_ip",
+      "assessed_at",
+      "source",
+      "summary",
+      "findings_stored"
+    ],
+    "title": "AssessmentListItem",
+    "type": "object"
+  },
+  "AssessmentRequest": {
+    "$defs": {
+      "SSHCredentials": {
+        "additionalProperties": false,
+        "description": "Usadas só durante a avaliação; nunca gravadas nem devolvidas.",
+        "properties": {
+          "auth_method": {
+            "enum": [
+              "key",
+              "password"
+            ],
+            "title": "Auth Method",
+            "type": "string"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Password"
+          },
+          "port": {
+            "default": 22,
+            "maximum": 65535,
+            "minimum": 1,
+            "title": "Port",
+            "type": "integer"
+          },
+          "private_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Private Key"
+          },
+          "username": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "auth_method"
+        ],
+        "title": "SSHCredentials",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "ip": {
+        "anyOf": [
+          {
+            "format": "ipvanyaddress",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "IP dentro do alvo (CIDR) e presente na última descoberta; omitido = primeiro descoberto",
+        "title": "Ip"
+      },
+      "report": {
+        "anyOf": [
+          {
+            "enum": [
+              "executive",
+              "technical"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Gera o PDF junto e devolve em `report`",
+        "title": "Report"
+      },
+      "ssh": {
+        "$ref": "#/$defs/SSHCredentials"
+      }
+    },
+    "required": [
+      "ssh"
+    ],
+    "title": "AssessmentRequest",
+    "type": "object"
+  },
+  "CertificatePayload": {
+    "additionalProperties": false,
+    "description": "Conteúdo assinado (Ed25519) do certificado. Formato do token:\nbase64url(json canônico) + \".\" + base64url(assinatura).",
+    "properties": {
+      "bill_containers": {
+        "title": "Bill Containers",
+        "type": "boolean"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "title": "Expires At",
+        "type": "string"
+      },
+      "holder": {
+        "title": "Holder",
+        "type": "string"
+      },
+      "installation_id": {
+        "format": "uuid",
+        "title": "Installation Id",
+        "type": "string"
+      },
+      "issued_at": {
+        "format": "date-time",
+        "title": "Issued At",
+        "type": "string"
+      },
+      "kid": {
+        "description": "Identifica a chave de assinatura (rotação)",
+        "title": "Kid",
+        "type": "string"
+      },
+      "kind": {
+        "enum": [
+          "direct",
+          "partner",
+          "internal"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "license_id": {
+        "title": "License Id",
+        "type": "string"
+      },
+      "v": {
+        "const": 1,
+        "default": 1,
+        "title": "V",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "kid",
+      "license_id",
+      "holder",
+      "kind",
+      "installation_id",
+      "issued_at",
+      "expires_at",
+      "bill_containers"
+    ],
+    "title": "CertificatePayload",
+    "type": "object"
+  },
+  "DiscoveryHost": {
+    "additionalProperties": false,
+    "properties": {
+      "classification": {
+        "enum": [
+          "windows",
+          "linux",
+          "docker",
+          "waf",
+          "firewall",
+          "vmware",
+          "unknown"
+        ],
+        "title": "Classification",
+        "type": "string"
+      },
+      "confidence": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Confidence",
+        "type": "number"
+      },
+      "ip": {
+        "title": "Ip",
+        "type": "string"
+      },
+      "scanned_at": {
+        "format": "date-time",
+        "title": "Scanned At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "ip",
+      "classification",
+      "confidence",
+      "scanned_at"
+    ],
+    "title": "DiscoveryHost",
+    "type": "object"
+  },
+  "ErrorResponse": {
+    "$defs": {
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "description": "Códigos estáveis de erro. Extensível: valores novos podem surgir.",
+        "enum": [
+          "unauthorized",
+          "forbidden_scope",
+          "not_found",
+          "validation_error",
+          "rate_limited",
+          "idempotency_mismatch",
+          "idempotency_in_progress",
+          "license_required",
+          "license_expired",
+          "license_revoked",
+          "target_not_discovered",
+          "ip_not_in_target",
+          "findings_not_stored",
+          "ssh_auth_failed",
+          "target_unreachable",
+          "assessment_timeout",
+          "upstream_error",
+          "internal_error"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "error": {
+        "$ref": "#/$defs/ErrorBody"
+      }
+    },
+    "required": [
+      "error"
+    ],
+    "title": "ErrorResponse",
+    "type": "object"
+  },
+  "LicensingError": {
+    "$defs": {
+      "LicensingErrorCode": {
+        "description": "Extensível: valores novos podem surgir.",
+        "enum": [
+          "license_invalid",
+          "license_revoked",
+          "installation_deactivated",
+          "installation_limit",
+          "installation_conflict",
+          "period_out_of_window",
+          "payload_too_large",
+          "validation_error"
+        ],
+        "title": "LicensingErrorCode",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "code": {
+        "$ref": "#/$defs/LicensingErrorCode"
+      },
+      "message": {
+        "title": "Message",
+        "type": "string"
+      },
+      "request_id": {
+        "title": "Request Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "code",
+      "message",
+      "request_id"
+    ],
+    "title": "LicensingError",
+    "type": "object"
+  },
+  "ReportRequest": {
+    "additionalProperties": false,
+    "description": "Gera o PDF de uma avaliação já feita — exige 'guardar achados' ligado\n(senão ErrorCode.findings_not_stored). Para não depender disso, peça\n`report` no próprio AssessmentRequest.",
+    "properties": {
+      "assessment_id": {
+        "format": "uuid",
+        "title": "Assessment Id",
+        "type": "string"
+      },
+      "kind": {
+        "enum": [
+          "executive",
+          "technical"
+        ],
+        "title": "Kind",
+        "type": "string"
+      }
+    },
+    "required": [
+      "assessment_id",
+      "kind"
+    ],
+    "title": "ReportRequest",
+    "type": "object"
+  },
+  "SyncRequest": {
+    "$defs": {
+      "UsageBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "host_hashes": {
+            "description": "HMAC-SHA256 hex de cada host distinto",
+            "items": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "title": "Host Hashes",
+            "type": "array"
+          },
+          "host_kind": {
+            "enum": [
+              "linux_host",
+              "docker_container"
+            ],
+            "title": "Host Kind",
+            "type": "string"
+          },
+          "period": {
+            "description": "Mês civil UTC, YYYY-MM",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "host_kind",
+          "host_hashes"
+        ],
+        "title": "UsageBatch",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "app_version": {
+        "anyOf": [
+          {
+            "maxLength": 50,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "App Version"
+      },
+      "hostname": {
+        "anyOf": [
+          {
+            "maxLength": 255,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Hostname"
+      },
+      "installation_id": {
+        "format": "uuid",
+        "title": "Installation Id",
+        "type": "string"
+      },
+      "license_key": {
+        "maxLength": 200,
+        "minLength": 10,
+        "title": "License Key",
+        "type": "string"
+      },
+      "usage": {
+        "items": {
+          "$ref": "#/$defs/UsageBatch"
+        },
+        "title": "Usage",
+        "type": "array"
+      }
+    },
+    "required": [
+      "license_key",
+      "installation_id"
+    ],
+    "title": "SyncRequest",
+    "type": "object"
+  },
+  "SyncResponse": {
+    "additionalProperties": false,
+    "properties": {
+      "certificate": {
+        "title": "Certificate",
+        "type": "string"
+      },
+      "server_time": {
+        "format": "date-time",
+        "title": "Server Time",
+        "type": "string"
+      },
+      "stored": {
+        "additionalProperties": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "linux_host",
+              "docker_container"
+            ]
+          },
+          "type": "object"
+        },
+        "description": "Contagem de hosts distintos guardada por período e tipo, após este sync",
+        "title": "Stored",
+        "type": "object"
+      }
+    },
+    "required": [
+      "certificate",
+      "server_time",
+      "stored"
+    ],
+    "title": "SyncResponse",
+    "type": "object"
+  },
+  "Target": {
+    "additionalProperties": false,
+    "properties": {
+      "address": {
+        "title": "Address",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "id": {
+        "title": "Id",
+        "type": "integer"
+      },
+      "label": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Label"
+      },
+      "tags": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Tags",
+        "type": "array"
+      }
+    },
+    "required": [
+      "id",
+      "address",
+      "label",
+      "tags",
+      "created_at"
+    ],
+    "title": "Target",
+    "type": "object"
+  },
+  "TargetCreate": {
+    "additionalProperties": false,
+    "properties": {
+      "address": {
+        "description": "IP único (\"10.0.0.5\") ou CIDR (\"10.0.0.0/24\")",
+        "title": "Address",
+        "type": "string"
+      },
+      "label": {
+        "anyOf": [
+          {
+            "maxLength": 200,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Label"
+      },
+      "tags": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 50,
+        "title": "Tags",
+        "type": "array"
+      }
+    },
+    "required": [
+      "address"
+    ],
+    "title": "TargetCreate",
+    "type": "object"
+  },
+  "WebhookEvent": {
+    "$defs": {
+      "AssessmentCompletedData": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null para container (não há id persistido)",
+            "title": "Assessment Id"
+          },
+          "source": {
+            "enum": [
+              "console",
+              "api"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/$defs/Summary"
+          },
+          "target": {
+            "discriminator": {
+              "mapping": {
+                "docker_container": "#/$defs/ContainerRef",
+                "linux_host": "#/$defs/HostRef"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HostRef"
+              },
+              {
+                "$ref": "#/$defs/ContainerRef"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "source",
+          "assessment_id",
+          "target",
+          "summary"
+        ],
+        "title": "AssessmentCompletedData",
+        "type": "object"
+      },
+      "ContainerRef": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "docker_container",
+            "default": "docker_container",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ContainerRef",
+        "type": "object"
+      },
+      "HostRef": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "assessed_ip": {
+            "title": "Assessed Ip",
+            "type": "string"
+          },
+          "kind": {
+            "const": "linux_host",
+            "default": "linux_host",
+            "title": "Kind",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_id",
+          "address",
+          "assessed_ip"
+        ],
+        "title": "HostRef",
+        "type": "object"
+      },
+      "Summary": {
+        "additionalProperties": false,
+        "properties": {
+          "compliance_pct": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None = nada aplicável foi avaliado",
+            "title": "Compliance Pct"
+          },
+          "failed": {
+            "minimum": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "not_applicable": {
+            "minimum": 0,
+            "title": "Not Applicable",
+            "type": "integer"
+          },
+          "not_assessed": {
+            "minimum": 0,
+            "title": "Not Assessed",
+            "type": "integer"
+          },
+          "passed": {
+            "minimum": 0,
+            "title": "Passed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "not_assessed",
+          "not_applicable",
+          "compliance_pct"
+        ],
+        "title": "Summary",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "data": {
+        "$ref": "#/$defs/AssessmentCompletedData"
+      },
+      "id": {
+        "format": "uuid",
+        "title": "Id",
+        "type": "string"
+      },
+      "installation_id": {
+        "format": "uuid",
+        "title": "Installation Id",
+        "type": "string"
+      },
+      "type": {
+        "const": "assessment.completed",
+        "title": "Type",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "type",
+      "created_at",
+      "installation_id",
+      "data"
+    ],
+    "title": "WebhookEvent",
+    "type": "object"
+  }
+}
