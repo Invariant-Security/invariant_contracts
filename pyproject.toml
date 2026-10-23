@@ -2,6 +2,7 @@
 name = "invariant_contracts"
 version = "0.2.0"
 description = "Shared Pydantic contracts crossing invariant_* service boundaries."
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pydantic>=2"]
 

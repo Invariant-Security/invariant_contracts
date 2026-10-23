@@ -1,14 +1,14 @@
 # invariant_contracts
 
-Modelos Pydantic compartilhados entre os serviços `invariant_*`
-(`invariant_ingestion`, `invariant_assessment`, `invariant_api`). Não é um
-serviço -- é uma dependência de build-time instalada pelos outros repos.
+Shared [Pydantic](https://docs.pydantic.dev/) data contracts for
+[Invariant](https://invariantsec.org), an open-source CIS compliance
+assessment toolkit for Linux hosts and containers.
 
-Parte da separação do monólito `Invariant-Security/Invariant` em
-repositórios por domínio de responsabilidade. Ver o plano de refatoração
-para o contexto completo.
+This package is the common vocabulary of the Invariant components: the
+assessment engine, the CIS benchmark ingestion pipeline and network
+discovery all exchange these models. It is a library, not a service.
 
-## Instalar (dos outros repos)
+## Install
 
 ```toml
 dependencies = [
@@ -16,31 +16,38 @@ dependencies = [
 ]
 ```
 
-Sempre fixe uma **tag** (`@vX.Y.Z`), nunca `@main`: o build de cada serviço
-precisa ser reproduzível e uma mudança aqui não pode chegar sem querer.
+Always pin a **tag** (`@vX.Y.Z`), never a branch, so builds stay
+reproducible.
 
-## Contratos públicos (`invariant_contracts.v1`)
+## Versioned contracts (`invariant_contracts.v1`)
 
-O pacote `v1` é contrato **externo** — API `/v1` do cliente vendedor,
-protocolo appliance ↔ central de licenças e evento de webhook. Os modelos da
-raiz (`Finding`, `Endpoint`...) são internos e podem mudar com o console.
+`v1` holds the external, versioned contracts. Compatibility policy (see
+`invariant_contracts.v1.POLICY`):
 
-Política de compatibilidade: ver `invariant_contracts.v1.POLICY` (só
-mudanças aditivas; remover/renomear = `/v2`; depreciação ≥ 6 meses).
+- only additive changes within `v1`;
+- removing or renaming a field means a new `v2`;
+- deprecations last at least 6 months.
 
-O teste `tests/test_v1_contracts.py::test_schema_snapshot_is_unchanged`
-compara o JSON Schema atual com `tests/snapshots/v1.json`. Se ele falhar, o
-contrato mudou: só regere o snapshot se a mudança for intencional e aditiva.
+`tests/test_v1_contracts.py::test_schema_snapshot_is_unchanged` compares the
+current JSON Schema with `tests/snapshots/v1.json`. If it fails, the contract
+changed: regenerate the snapshot only when the change is intentional and
+additive.
 
-Funções puras compartilhadas:
-- `invariant_contracts.usage`: normalização de IP e de container (identidade
-  comercial), período UTC e hash de uso enviado à central.
-- `invariant_contracts.signing`: assinatura/verificação do webhook (HMAC) e
-  envelope do certificado de licença.
+Models at the package root (`Finding`, `Endpoint`, ...) are internal and may
+change between releases.
 
-## Desenvolvimento
+## Development
 
 ```bash
 pip install -e ".[dev]"
 pytest tests/ -q
 ```
+
+## Contributing
+
+Contributions are welcome under the DCO, with no CLA. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[Apache License 2.0](LICENSE).
