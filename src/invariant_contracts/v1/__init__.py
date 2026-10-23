@@ -1,10 +1,10 @@
 """Contratos públicos congelados (versão 1).
 
 Tudo neste pacote é contrato EXTERNO: a API /v1 que o cliente vendedor
-consome, o protocolo appliance ↔ central de licenças e o evento de webhook.
+consome e o evento de webhook.
 Ao contrário dos modelos internos em `invariant_contracts.*` (que mudam junto
 com o console), estes só mudam de forma aditiva — ver POLICY abaixo e o teste
-de snapshot em tests/test_v1_snapshots.py.
+de snapshot em tests/test_v1_contracts.py.
 """
 
 from invariant_contracts.v1.api import (
@@ -22,15 +22,6 @@ from invariant_contracts.v1.api import (
     Summary,
     Target,
     TargetCreate,
-)
-from invariant_contracts.v1.licensing import (
-    CertificatePayload,
-    LicenseKind,
-    LicensingError,
-    LicensingErrorCode,
-    SyncRequest,
-    SyncResponse,
-    UsageBatch,
 )
 from invariant_contracts.v1.webhook import (
     AssessmentCompletedData,
@@ -55,9 +46,9 @@ API_KEY_SCOPES = (
 )
 
 POLICY = """\
-Política de compatibilidade do /v1 (e dos contratos de licença e webhook):
+Política de compatibilidade do /v1 (e do contrato de webhook):
 - Só mudanças aditivas: campo novo opcional, rota nova, valor novo em enum
-  documentado como extensível (ErrorCode, LicensingErrorCode).
+  documentado como extensível (ErrorCode).
 - Clientes devem ignorar campos desconhecidos nas respostas.
 - Remover, renomear ou mudar o tipo de um campo = nova versão (/v2).
 - Depreciação anunciada com no mínimo 6 meses de antecedência.
@@ -78,7 +69,6 @@ __all__ = [
     "AssessmentEnvelope",
     "AssessmentListItem",
     "AssessmentRequest",
-    "CertificatePayload",
     "ContainerRef",
     "DiscoveryHost",
     "ErrorBody",
@@ -86,18 +76,12 @@ __all__ = [
     "ErrorResponse",
     "Finding",
     "HostRef",
-    "LicenseKind",
-    "LicensingError",
-    "LicensingErrorCode",
     "POLICY",
     "ReportKind",
     "ReportRequest",
     "SSHCredentials",
     "Summary",
-    "SyncRequest",
-    "SyncResponse",
     "Target",
     "TargetCreate",
-    "UsageBatch",
     "WebhookEvent",
 ]

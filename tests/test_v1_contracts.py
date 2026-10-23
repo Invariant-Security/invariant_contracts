@@ -39,13 +39,12 @@ def test_every_error_code_value_is_stable():
     }
 
 
-@pytest.mark.parametrize("model", [v1.TargetCreate, v1.Summary, v1.ErrorBody, v1.SyncRequest])
+@pytest.mark.parametrize("model", [v1.TargetCreate, v1.Summary, v1.ErrorBody])
 def test_unknown_fields_are_rejected(model):
     base = {
         v1.TargetCreate: {"address": "10.0.0.5"},
         v1.Summary: {"passed": 1, "failed": 0, "not_assessed": 0, "not_applicable": 0, "compliance_pct": 100},
         v1.ErrorBody: {"code": "not_found", "message": "x", "request_id": "r"},
-        v1.SyncRequest: {"license_key": "inv_lic_abcdefgh", "installation_id": str(uuid4())},
     }[model]
     model.model_validate(base)
     with pytest.raises(ValidationError):
@@ -83,17 +82,6 @@ def test_summary_bounds():
         v1.Summary(passed=-1, failed=0, not_assessed=0, not_applicable=0, compliance_pct=None)
     with pytest.raises(ValidationError):
         v1.Summary(passed=1, failed=0, not_assessed=0, not_applicable=0, compliance_pct=101)
-
-
-def test_usage_batch_accepts_only_sha256_hex_and_valid_periods():
-    good = "a" * 64
-    v1.UsageBatch(period="2026-10", host_kind="linux_host", host_hashes=[good])
-    for period in ("2026-13", "2026-1", "26-10"):
-        with pytest.raises(ValidationError):
-            v1.UsageBatch(period=period, host_kind="linux_host", host_hashes=[good])
-    for h in ("A" * 64, "a" * 63, "10.0.0.5"):
-        with pytest.raises(ValidationError):
-            v1.UsageBatch(period="2026-10", host_kind="linux_host", host_hashes=[h])
 
 
 SUMMARY = {"passed": 1, "failed": 1, "not_assessed": 0, "not_applicable": 0, "compliance_pct": 50}
@@ -180,26 +168,9 @@ def test_ssh_credentials_are_input_only():
 @pytest.mark.parametrize(
     "model",
     [v1.Target, v1.DiscoveryHost, v1.AssessmentEnvelope, v1.AssessmentListItem, v1.ErrorResponse,
-     v1.WebhookEvent, v1.SyncResponse, v1.CertificatePayload, v1.LicensingError],
+     v1.WebhookEvent],
 )
 def test_no_output_model_can_carry_credentials(model):
     text = json.dumps(model.model_json_schema()).lower()
     for forbidden in ("sshcredentials", "password", "private_key", "license_key"):
         assert forbidden not in text, f"{model.__name__} expõe {forbidden}"
-
-
-def test_certificate_payload_requires_kid_and_known_kind():
-    payload = {
-        "kid": "ed25519-2026-10",
-        "license_id": "lic_1",
-        "holder": "Acme",
-        "kind": "partner",
-        "installation_id": str(uuid4()),
-        "issued_at": "2026-10-01T00:00:00Z",
-        "expires_at": "2026-10-08T00:00:00Z",
-        "bill_containers": False,
-    }
-    assert v1.CertificatePayload.model_validate(payload).v == 1
-    for broken in ({"kind": "trial"}, {"kid": None}):
-        with pytest.raises(ValidationError):
-            v1.CertificatePayload.model_validate({**payload, **broken})
