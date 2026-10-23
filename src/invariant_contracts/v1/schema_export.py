@@ -19,10 +19,6 @@ MODELS = [
     v1.AssessmentListItem,
     v1.ReportRequest,
     v1.ErrorResponse,
-    v1.SyncRequest,
-    v1.SyncResponse,
-    v1.CertificatePayload,
-    v1.LicensingError,
     v1.WebhookEvent,
 ]
 
