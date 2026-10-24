@@ -11,6 +11,9 @@ from pydantic import ValidationError
 from invariant_contracts import v1
 from invariant_contracts.v1.schema_export import export
 
+FP = "SHA256:" + "A" * 43  # valor obviamente falso, formato OpenSSH
+PW = {"host_key_type": "ssh-ed25519", "host_key_fingerprint": FP}
+
 SNAPSHOT = Path(__file__).parent / "snapshots" / "v1.json"
 
 
@@ -36,6 +39,7 @@ def test_every_error_code_value_is_stable():
         "license_expired",
         "license_revoked",
         "findings_not_stored",
+        "host_key_mismatch",
     }
 
 
@@ -52,12 +56,12 @@ def test_unknown_fields_are_rejected(model):
 
 
 def test_ssh_credentials_require_exactly_the_matching_secret():
-    v1.SSHCredentials(username="u", auth_method="password", password="p")
+    v1.SSHCredentials(username="u", auth_method="password", password="p", **PW)
     v1.SSHCredentials(username="u", auth_method="key", private_key="-----BEGIN")
     for bad in (
-        {"auth_method": "password"},
+        {"auth_method": "password", **PW},
         {"auth_method": "key"},
-        {"auth_method": "password", "password": "p", "private_key": "k"},
+        {"auth_method": "password", "password": "p", "private_key": "k", **PW},
         {"auth_method": "key", "private_key": "k", "password": "p"},
         {"auth_method": "token", "password": "p"},
     ):
@@ -66,12 +70,12 @@ def test_ssh_credentials_require_exactly_the_matching_secret():
 
 
 def test_ssh_secrets_never_appear_in_repr():
-    creds = v1.SSHCredentials(username="u", auth_method="password", password="s3gr3d0")
+    creds = v1.SSHCredentials(username="u", auth_method="password", password="s3gr3d0", **PW)
     assert "s3gr3d0" not in repr(creds)
 
 
 def test_assessment_request_ip_must_be_an_ip():
-    ssh = {"username": "u", "auth_method": "password", "password": "p"}
+    ssh = {"username": "u", "auth_method": "password", "password": "p", **PW}
     assert str(v1.AssessmentRequest(ssh=ssh, ip="10.0.0.5").ip) == "10.0.0.5"
     with pytest.raises(ValidationError):
         v1.AssessmentRequest(ssh=ssh, ip="10.0.0.0/24")
@@ -146,7 +150,7 @@ def test_findings_and_omitted_reason_are_mutually_exclusive():
 
 
 def test_assessment_has_no_inline_pdf():
-    ssh = {"username": "u", "auth_method": "password", "password": "p"}
+    ssh = {"username": "u", "auth_method": "password", "password": "p", **PW}
     with pytest.raises(ValidationError):
         v1.AssessmentRequest(ssh=ssh, report="technical")
     with pytest.raises(ValidationError):
@@ -154,7 +158,7 @@ def test_assessment_has_no_inline_pdf():
 
 
 def test_ssh_credentials_are_input_only():
-    creds = v1.SSHCredentials(username="u", auth_method="password", password="s3gr3d0")
+    creds = v1.SSHCredentials(username="u", auth_method="password", password="s3gr3d0", **PW)
     dumped = creds.model_dump_json()
     assert "s3gr3d0" not in dumped and "password" not in creds.model_dump()
     key = v1.SSHCredentials(username="u", auth_method="key", private_key="-----BEGIN KEY")
@@ -174,3 +178,59 @@ def test_no_output_model_can_carry_credentials(model):
     text = json.dumps(model.model_json_schema()).lower()
     for forbidden in ("sshcredentials", "password", "private_key", "license_key"):
         assert forbidden not in text, f"{model.__name__} expõe {forbidden}"
+
+
+def _ssh(**over):
+    return {"username": "u", "auth_method": "key", "private_key": "k", **over}
+
+
+def test_host_key_fields_are_optional_for_key_auth():
+    c = v1.SSHCredentials(**_ssh())
+    assert c.host_key_type is None and c.host_key_fingerprint is None and c.host_key_mode is None
+
+
+def test_host_key_valid_combinations():
+    v1.SSHCredentials(**_ssh(host_key_mode="first_use"))
+    v1.SSHCredentials(**_ssh(host_key_mode="pinned", **PW))
+    v1.SSHCredentials(**_ssh(**PW))
+    v1.SSHCredentials(username="u", auth_method="password", password="p", host_key_mode="pinned", **PW)
+    for t in ("ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-rsa"):
+        v1.SSHCredentials(**_ssh(host_key_type=t, host_key_fingerprint=FP))
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"host_key_mode": "pinned"},
+        {"host_key_mode": "pinned", "host_key_type": "ssh-ed25519"},
+        {"host_key_mode": "first_use", **PW},
+        {"host_key_type": "ssh-ed25519"},
+        {"host_key_fingerprint": FP},
+        {"host_key_mode": "other"},
+        {"host_key_type": "ssh-dss", "host_key_fingerprint": FP},
+        {"host_key_type": "ssh-ed25519", "host_key_fingerprint": "SHA256:curto"},
+        {"host_key_type": "ssh-ed25519", "host_key_fingerprint": "MD5:" + "A" * 43},
+        {"host_key_type": "ssh-ed25519", "host_key_fingerprint": FP + "="},
+    ],
+)
+def test_host_key_invalid_combinations(bad):
+    with pytest.raises(ValidationError):
+        v1.SSHCredentials(**_ssh(**bad))
+
+
+@pytest.mark.parametrize("extra", [{}, {"host_key_mode": "first_use"}])
+def test_password_requires_fingerprint(extra):
+    with pytest.raises(ValidationError):
+        v1.SSHCredentials(username="u", auth_method="password", password="p", **extra)
+
+
+def test_envelope_host_key_result_fields():
+    old = v1.AssessmentEnvelope.model_validate(_envelope())
+    assert old.host_key_observed is None and old.host_key_verification is None
+    new = v1.AssessmentEnvelope.model_validate(
+        _envelope(host_key_observed={"type": "ssh-ed25519", "fingerprint": FP}, host_key_verification="retrust")
+    )
+    assert new.host_key_observed.fingerprint == FP
+    for bad in ({"host_key_verification": "x"}, {"host_key_observed": {"type": "ssh-ed25519", "fingerprint": "x"}}):
+        with pytest.raises(ValidationError):
+            v1.AssessmentEnvelope.model_validate(_envelope(**bad))
