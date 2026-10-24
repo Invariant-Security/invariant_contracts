@@ -81,6 +81,34 @@
         "title": "Finding",
         "type": "object"
       },
+      "HostKeyObserved": {
+        "additionalProperties": false,
+        "description": "Chave de host vista na execução. Pública (nunca segredo).",
+        "properties": {
+          "fingerprint": {
+            "pattern": "^SHA256:[A-Za-z0-9+/]{43}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "ssh-ed25519",
+              "ecdsa-sha2-nistp256",
+              "ecdsa-sha2-nistp384",
+              "ecdsa-sha2-nistp521",
+              "ssh-rsa"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "fingerprint"
+        ],
+        "title": "HostKeyObserved",
+        "type": "object"
+      },
       "Summary": {
         "additionalProperties": false,
         "properties": {
@@ -176,6 +204,36 @@
         ],
         "description": "not_stored: 'guardar achados' desligado (inclusive em repetição por Idempotency-Key); retention_expired: guardados, mas já apagados pela retenção",
         "title": "Findings Omitted Reason"
+      },
+      "host_key_observed": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/HostKeyObserved"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Chave de host vista nesta execução (SSH); null se não houve SSH"
+      },
+      "host_key_verification": {
+        "anyOf": [
+          {
+            "enum": [
+              "operator",
+              "first_use",
+              "retrust"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Como a chave foi verificada: operator = fingerprint fixado pelo operador; first_use = TOFU; retrust = chave nova aceita após mismatch",
+        "title": "Host Key Verification"
       },
       "source": {
         "enum": [
@@ -324,6 +382,54 @@
             ],
             "title": "Auth Method",
             "type": "string"
+          },
+          "host_key_fingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^SHA256:[A-Za-z0-9+/]{43}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Host Key Fingerprint"
+          },
+          "host_key_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pinned",
+                  "first_use"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Host Key Mode"
+          },
+          "host_key_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ssh-ed25519",
+                  "ecdsa-sha2-nistp256",
+                  "ecdsa-sha2-nistp384",
+                  "ecdsa-sha2-nistp521",
+                  "ssh-rsa"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Host Key Type"
           },
           "password": {
             "anyOf": [
@@ -483,6 +589,7 @@
           "ip_not_in_target",
           "findings_not_stored",
           "ssh_auth_failed",
+          "host_key_mismatch",
           "target_unreachable",
           "assessment_timeout",
           "upstream_error",
