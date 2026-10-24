@@ -7,7 +7,7 @@ uma mudança interna nunca vaze para o contrato.
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, IPvAnyAddress, model_validator
@@ -36,6 +36,7 @@ class ErrorCode(str, Enum):
     ip_not_in_target = "ip_not_in_target"
     findings_not_stored = "findings_not_stored"
     ssh_auth_failed = "ssh_auth_failed"
+    host_key_mismatch = "host_key_mismatch"
     target_unreachable = "target_unreachable"
     assessment_timeout = "assessment_timeout"
     upstream_error = "upstream_error"
@@ -43,6 +44,8 @@ class ErrorCode(str, Enum):
 
 
 class ErrorBody(_Model):
+    # host_key_mismatch: a chave de host vista difere da fixada. O `message`
+    # cita só a chave vista (tipo + fingerprint SHA256, públicos), nunca segredo.
     code: ErrorCode
     message: str
     request_id: str
@@ -78,6 +81,12 @@ class DiscoveryHost(_Model):
 
 _WRITE_ONLY = {"writeOnly": True}
 
+HostKeyType = Literal[
+    "ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-rsa"
+]
+# Formato OpenSSH: "SHA256:" + base64 sem padding (43 caracteres).
+HostKeyFingerprint = Annotated[str, Field(pattern=r"^SHA256:[A-Za-z0-9+/]{43}$")]
+
 
 class SSHCredentials(_Model):
     """SOMENTE ENTRADA. Usadas apenas durante a avaliação: nunca aparecem em
@@ -92,6 +101,24 @@ class SSHCredentials(_Model):
     auth_method: Literal["key", "password"]
     private_key: str | None = Field(default=None, repr=False, exclude=True, json_schema_extra=_WRITE_ONLY)
     password: str | None = Field(default=None, repr=False, exclude=True, json_schema_extra=_WRITE_ONLY)
+
+    host_key_type: HostKeyType | None = None
+    host_key_fingerprint: HostKeyFingerprint | None = None
+    # pinned: exige tipo+fingerprint. first_use (TOFU): não aceita fingerprint.
+    # Sem nenhum dos três campos: válido só com auth_method=key (alvo já cadastrado).
+    host_key_mode: Literal["pinned", "first_use"] | None = None
+
+    @model_validator(mode="after")
+    def _host_key_rules(self) -> "SSHCredentials":
+        if (self.host_key_type is None) != (self.host_key_fingerprint is None):
+            raise ValueError("host_key_type e host_key_fingerprint andam juntos")
+        if self.host_key_mode == "pinned" and self.host_key_fingerprint is None:
+            raise ValueError("host_key_mode=pinned exige host_key_type e host_key_fingerprint")
+        if self.host_key_mode == "first_use" and self.host_key_fingerprint is not None:
+            raise ValueError("host_key_mode=first_use não aceita host_key_fingerprint")
+        if self.auth_method == "password" and self.host_key_fingerprint is None:
+            raise ValueError("auth_method=password exige host_key_fingerprint (senha nunca vai com first_use)")
+        return self
 
     @model_validator(mode="after")
     def _exactly_one_secret(self) -> "SSHCredentials":
@@ -137,6 +164,13 @@ class Summary(_Model):
     compliance_pct: int | None = Field(ge=0, le=100, description="None = nada aplicável foi avaliado")
 
 
+class HostKeyObserved(_Model):
+    """Chave de host vista na execução. Pública (nunca segredo)."""
+
+    type: HostKeyType
+    fingerprint: HostKeyFingerprint
+
+
 FindingsOmittedReason = Literal["not_stored", "retention_expired"]
 
 
@@ -148,6 +182,14 @@ class AssessmentEnvelope(_Model):
     assessed_at: datetime
     source: Literal["console", "api"]
     summary: Summary
+    host_key_observed: HostKeyObserved | None = Field(
+        default=None, description="Chave de host vista nesta execução (SSH); null se não houve SSH"
+    )
+    host_key_verification: Literal["operator", "first_use", "retrust"] | None = Field(
+        default=None,
+        description="Como a chave foi verificada: operator = fingerprint fixado pelo operador; "
+        "first_use = TOFU; retrust = chave nova aceita após mismatch",
+    )
     findings: list[Finding] | None = Field(
         description="Presente na resposta da própria avaliação; depois, só se 'guardar achados' estiver "
         "ligado e dentro da retenção. null sempre acompanha findings_omitted_reason."
